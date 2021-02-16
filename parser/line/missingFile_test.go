@@ -1,4 +1,4 @@
-package parser
+package line
 
 import (
 	"testing"
@@ -32,7 +32,7 @@ func Test_ParseVersion(t *testing.T) {
 }
 
 func Test_ParseModifiedDate(t *testing.T) {
-	testDate := time.Date(2020, 6, 19, 15, 46, 8, 0, time.UTC)
+	testDate := time.Date(2019, 6, 20, 15, 46, 8, 0, time.UTC)
 	res := p.parseModifiedDate()
 	assert.Equal(t, testDate, res)
 }

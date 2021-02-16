@@ -1,4 +1,4 @@
-package parser
+package line
 
 import (
 	"log"
@@ -62,7 +62,7 @@ func (p *MissingFileParser) parseModifiedDate() time.Time {
 	re := regexp.MustCompile("lmd:.{1,}\\)")
 	str := re.FindString(p.Line)
 
-	layout := "02/01/06 15:04:05"
+	layout := "06/01/02 15:04:05"
 
 	date, err := time.Parse(layout, str[4:len(str)-1])
 
