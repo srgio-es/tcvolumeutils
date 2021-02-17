@@ -17,3 +17,5 @@
 # Examples files
 /example
 /examples
+
+*.xlsx

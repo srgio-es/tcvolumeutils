@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	missingFileHeaderStyle = `{
+	sheetHeaderStyle = `{
 		"font":
 		{
 			"bold": true
@@ -40,8 +40,16 @@ func (e *ExcelReporter) GenerateMissingFilesReport(data map[string][]*model.Miss
 		f.SetSheetName("Sheet1", summarysheet)
 	}
 
+	headerStyle, err := f.NewStyle(sheetHeaderStyle)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	f.SetCellValue(summarysheet, "A1", "Volume Name")
 	f.SetCellValue(summarysheet, "B1", "Missing Files")
+
+	f.SetCellStyle(summarysheet, "A1", "B1", headerStyle)
 
 	volumes := make([]string, 0, len(data))
 
@@ -71,7 +79,7 @@ func printSummaryLine(file *excelize.File, order int, volume string, missingFile
 	row := strconv.FormatInt(int64(order) + 2, 10)
 	file.SetCellValue(summarysheet, "A" + row, volume)
 	file.SetCellValue(summarysheet, "B" + row, missingFilesQty)
-	file.SetCellHyperLink(summarysheet, "A" + row, volume+"!A1", "Location")
+	file.SetCellHyperLink(summarysheet, "A" + row, "'"+volume+"'"+"!A1", "Location")
 
 }
 
@@ -100,7 +108,7 @@ func printVolumeSheetValues(file *excelize.File, sheet string, data []*model.Mis
 }
 
 func printVolumeSheetHeader(file *excelize.File, sheet string) {
-	headerStyle, err := file.NewStyle(missingFileHeaderStyle)
+	headerStyle, err := file.NewStyle(sheetHeaderStyle)
 
 	if err != nil {
 		log.Fatal(err)
