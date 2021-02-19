@@ -41,9 +41,7 @@ func init() {
 	reportmissingCmd.MarkFlagDirname("logs-folder")
 	reportmissingCmd.MarkFlagRequired("logs-folder")
 
-	reportmissingCmd.Flags().StringVarP(&reportFile, "report", "r", "volumes-report.xlsx", `Specifies the path to the XLSX file to populate with the results.
-If it doesn't not exist it will create a new one, otherwhise
-it will append data to the passed one`)
+	reportmissingCmd.Flags().StringVarP(&reportFile, "report", "r", "volumes-report.xlsx", `Specifies the path to the XLSX file to populate with the results.`)
 	reportmissingCmd.MarkFlagFilename("report")
 }
 
