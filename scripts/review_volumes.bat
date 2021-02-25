@@ -40,23 +40,24 @@ IF NOT EXIST %OUTPUT_FOLDER%\before mkdir %OUTPUT_FOLDER%\before
 IF NOT EXIST %OUTPUT_FOLDER%\after mkdir %OUTPUT_FOLDER%\after
 
 echo Review Volumes - %~n0%~x0 - %YYYY%%MM%%DD%_%HH%_%Min%_%Sec% >> %LOG_FILE%
-echo . >> %LOG_FILE%
+echo. >> %LOG_FILE%
+
+call %TC_MENU%
 
 goto review_all_volumes
 
 :review_all_volumes
 echo ----------- Review Volumes begins ------------ >> %LOG_FILE%
-echo . >> %LOG_FILE%
+echo. >> %LOG_FILE%
 review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLDER%\before >> %LOG_FILE%
 
 echo review_volumes finished with exit code=%ERRORLEVEL% >> %LOG_FILE%
-echo . >> %LOG_FILE%
+echo. >> %LOG_FILE%
 
-if %ERRORLEVEL% EQU 0 goto :clean_volumes
-else exit /b 1
+goto :clean_volumes
 
 :clean_volumes
-for /F "tokens=1 delims=." %%i in ('dir /B %OUTPUT_FOLDER%\before\*.txt') do call :clean_volume %%i
+for %%f in (%OUTPUT_FOLDER%\before\*.txt) do call :clean_volume %%~nf
 
 goto :review_after_clean
 
@@ -64,33 +65,30 @@ goto :review_after_clean
 if NOT [%1]==[] (
     set VOLUME=%1
     echo Cleaning volume %VOLUME%.txt >> %LOG_FILE%
-    echo . >> %LOG_FILE%
+    echo. >> %LOG_FILE%
 
     review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -v=%VOLUME% -if=%OUTPUT_FOLDER%\before\%VOLUME%.txt -of=%OUTPUT_FOLDER%\log\%VOLUME%.log >> %LOG_FILE%
 
     echo review_volumes for volume %VOLUME% finished with exit code=%ERRORLEVEL% >> %LOG_FILE%
-    echo . >> %LOG_FILE%
-
-    if not %ERRORLEVEL% EQU 0 exit /b 1
-
-) else goto :review_after_clean
+    echo. >> %LOG_FILE%
+)
 
 :review_after_clean
 echo ----------- Review Volumes After clean begins ------------ >> %LOG_FILE%
-echo . >> %LOG_FILE%
+echo. >> %LOG_FILE%
 review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLDER%\after >> %LOG_FILE%
 
-echo review_volumes after clean finished with exit code=%ERRORLEVEL% >> %LOG_FILE%
-echo . >> %LOG_FILE%
-
-if %ERRORLEVEL% EQU 0 goto :generate_missing_report
-else exit /b 1
+goto :generate_missing_report
 
 :generate_missing_report
 echo ----------- Generate Missing Files Report XLSX ------------ >> %LOG_FILE%
-echo . >> %LOG_FILE%
+echo. >> %LOG_FILE%
 
 set PATH=%PATH%;%VOLUMEUTILS_PATH%
-tcvolumeutils reportmissing -f %OUTPUT_FOLDER%\after -r %OUTPUT_FOLDER%\%REPORT_FILE% -v >> %LOG_FILE%
+tcvolumeutils reportmissing -f %OUTPUT_FOLDER%\after -r %REPORT_FILE% -v >> %LOG_FILE%
 
 goto :eof
+
+
+:eof
+echo Script finished >> %LOG_FILE%
