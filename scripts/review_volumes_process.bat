@@ -44,9 +44,6 @@ echo. >> %LOG_FILE%
 
 call %TC_MENU%
 
-goto review_all_volumes
-
-:review_all_volumes
 echo ----------- Review Volumes begins ------------ >> %LOG_FILE%
 echo. >> %LOG_FILE%
 review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLDER%\before >> %LOG_FILE%
@@ -54,12 +51,21 @@ review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLD
 echo review_volumes finished with exit code=%ERRORLEVEL% >> %LOG_FILE%
 echo. >> %LOG_FILE%
 
-goto :clean_volumes
-
-:clean_volumes
 for %%f in (%OUTPUT_FOLDER%\before\*.txt) do call :clean_volume %%~nf
 
-goto :review_after_clean
+echo ----------- Review Volumes After clean begins ------------ >> %LOG_FILE%
+echo. >> %LOG_FILE%
+review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLDER%\after >> %LOG_FILE%
+
+echo ----------- Generate Missing Files Report XLSX ------------ >> %LOG_FILE%
+echo. >> %LOG_FILE%
+
+set PATH=%PATH%;%VOLUMEUTILS_PATH%
+tcvolumeutils reportmissing -f %OUTPUT_FOLDER%\after -r %REPORT_FILE% -v >> %LOG_FILE%
+
+echo Script finished >> %LOG_FILE%
+
+goto :EOF
 
 :clean_volume
 if NOT [%1]==[] (
@@ -72,23 +78,3 @@ if NOT [%1]==[] (
     echo review_volumes for volume %VOLUME% finished with exit code=%ERRORLEVEL% >> %LOG_FILE%
     echo. >> %LOG_FILE%
 )
-
-:review_after_clean
-echo ----------- Review Volumes After clean begins ------------ >> %LOG_FILE%
-echo. >> %LOG_FILE%
-review_volumes -u=%USER% -pf=%PWD_FILE% -g=dba -parallel=5 -rfolder=%OUTPUT_FOLDER%\after >> %LOG_FILE%
-
-goto :generate_missing_report
-
-:generate_missing_report
-echo ----------- Generate Missing Files Report XLSX ------------ >> %LOG_FILE%
-echo. >> %LOG_FILE%
-
-set PATH=%PATH%;%VOLUMEUTILS_PATH%
-tcvolumeutils reportmissing -f %OUTPUT_FOLDER%\after -r %REPORT_FILE% -v >> %LOG_FILE%
-
-goto :eof
-
-
-:eof
-echo Script finished >> %LOG_FILE%
