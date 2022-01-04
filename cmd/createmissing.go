@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	out "github.com/srgio-es/tcvolumeutils/utils/output"
@@ -16,6 +15,9 @@ var (
 		Long: `This command creates empty files with the same exact name and locations as the missing found files.
         This is helpful when administering volumes with commands such as dataset_cleanup or purge_datasets as they
         will fail in the event of a missing reference.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return checkArgs()
+		},
 		Run: createMissing,
 	}
 )
@@ -34,17 +36,26 @@ func createMissing(cmd *cobra.Command, args []string) {
 	verbose, _ := cmd.Parent().Flags().GetBool("verbose")
 	output = out.VerboseOutput{Verbose: verbose}
 
-	err := checkArgs()
-	if err != nil {
-		fmt.Println(err.Error() + "\n\n")
-		cmd.Usage()
-		os.Exit(1)
+	switch {
+	case logFolder != "":
+		output.Printf("Log Folder: %s\n", logFolder)
+		output.Println("")
+
+		fmt.Println("You have entered a folder to be processed. This should not be stopped. Do you want to continue?\nPlease enter (y)es or (n)no")
+		if askForConfirmation() {
+
+		}
+
+	case logFile != "":
+		output.Printf("Log File: %s\n", logFile)
+		output.Println("")
+
 	}
 
 }
 func checkArgs() error {
 	if logFile != "" && logFolder != "" {
-		return errors.New("log-file and log-folder arguments are mutually exclusive. Please specify only one of them")
+		return errors.New("log-file and log-folder arguments are mutually exclusive. Please specify only one of them.")
 	}
 
 	return nil
