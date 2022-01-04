@@ -25,15 +25,14 @@ var (
 
 The information is processed and writed into a XLXS file to improve readiness.
 If the XLSX file specified contains data, the file is updated appending the new values.`,
-		Run: processCommand,
+		Run: reportMissing,
 	}
 
-	logFolder string
-	reportFile string
 	output out.VerboseOutput
 
 	collection map[string][]model.MissingFile
 )
+
 func init() {
 	rootCmd.AddCommand(reportmissingCmd)
 
@@ -45,7 +44,7 @@ func init() {
 	reportmissingCmd.MarkFlagFilename("report")
 }
 
-func processCommand(cmd *cobra.Command, args []string) {
+func reportMissing(cmd *cobra.Command, args []string) {
 	verbose, _ := cmd.Parent().Flags().GetBool("verbose")
 	output = out.VerboseOutput{Verbose: verbose}
 
@@ -65,7 +64,7 @@ func processCommand(cmd *cobra.Command, args []string) {
 
 	var toProcess []os.FileInfo
 	for _, file := range allFiles {
-		if(!file.IsDir() && strings.HasSuffix(file.Name(), "txt")){
+		if !file.IsDir() && strings.HasSuffix(file.Name(), "txt") {
 			toProcess = append(toProcess, file)
 		}
 	}
@@ -82,7 +81,7 @@ func processCommand(cmd *cobra.Command, args []string) {
 
 }
 
-func processLogs(files []os.FileInfo) (map[string][]*model.MissingFile) {
+func processLogs(files []os.FileInfo) map[string][]*model.MissingFile {
 
 	var result = make(map[string][]*model.MissingFile)
 
@@ -98,7 +97,7 @@ func processLogs(files []os.FileInfo) (map[string][]*model.MissingFile) {
 
 }
 
-func processFile(location string, file string, volume string) ([]*model.MissingFile) {
+func processFile(location string, file string, volume string) []*model.MissingFile {
 
 	var missingFiles []*model.MissingFile
 
@@ -111,7 +110,7 @@ func processFile(location string, file string, volume string) ([]*model.MissingF
 
 		lines := getLines(f)
 
-		if(len(lines) > 0) {
+		if len(lines) > 0 {
 			fmt.Printf("Volume %s has %d missing files\n", file, len(lines))
 		} else {
 			output.Printf("Volume %s has no missing files\n", file)
@@ -146,8 +145,7 @@ func getLines(raw []byte) []string {
 	s := strings.Index(string(raw), "\n")
 	e := strings.Index(string(raw), "--------------------------------------------------------------------------------")
 
-
-	if s > 0 && e > 0{
+	if s > 0 && e > 0 {
 		raw = raw[s:e]
 	}
 
