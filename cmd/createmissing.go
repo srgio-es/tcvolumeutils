@@ -3,6 +3,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	out "github.com/srgio-es/tcvolumeutils/utils/output"
@@ -36,6 +39,8 @@ func createMissing(cmd *cobra.Command, args []string) {
 	verbose, _ := cmd.Parent().Flags().GetBool("verbose")
 	output = out.VerboseOutput{Verbose: verbose}
 
+	var toProcess []os.FileInfo
+
 	switch {
 	case logFolder != "":
 		output.Printf("Log Folder: %s\n", logFolder)
@@ -43,19 +48,52 @@ func createMissing(cmd *cobra.Command, args []string) {
 
 		fmt.Println("You have entered a folder to be processed. This should not be stopped. Do you want to continue?\nPlease enter (y)es or (n)no")
 		if askForConfirmation() {
+			output.Println("")
 
+			allFiles, err := ioutil.ReadDir(logFolder)
+			if err != nil {
+				fmt.Println("ERROR: The specified logs directory does not exist")
+				fmt.Println("")
+				cmd.Usage()
+				os.Exit(1)
+			}
+
+			for _, file := range allFiles {
+				if !file.IsDir() && strings.HasSuffix(file.Name(), "txt") {
+					toProcess = append(toProcess, file)
+				}
+			}
+
+			output.Printf("%d review_volumes log files marked to process", len(toProcess))
+
+		} else {
+			os.Exit(2)
 		}
 
 	case logFile != "":
 		output.Printf("Log File: %s\n", logFile)
 		output.Println("")
 
+		file, err := os.Stat(logFile)
+		if err != nil {
+			fmt.Println("ERROR: The log file does not exist")
+			fmt.Println("")
+			cmd.Usage()
+			os.Exit(1)
+		}
+
+		toProcess = append(toProcess, file)
 	}
+
+	data := processLogs(toProcess)
+	fmt.Printf("%s", data)
 
 }
 func checkArgs() error {
 	if logFile != "" && logFolder != "" {
-		return errors.New("log-file and log-folder arguments are mutually exclusive. Please specify only one of them.")
+		return errors.New("log-file and log-folder arguments are mutually exclusive. Please specify only one of them.\n")
+	} else if logFile == "" && logFolder == "" {
+		return errors.New("Please specify at least one argument\n")
 	}
 
 	return nil
