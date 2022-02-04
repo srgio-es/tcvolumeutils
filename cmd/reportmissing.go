@@ -3,16 +3,12 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/srgio-es/tcvolumeutils/model"
-	converter "github.com/srgio-es/tcvolumeutils/parser/line"
 	"github.com/srgio-es/tcvolumeutils/reporter"
-	"github.com/srgio-es/tcvolumeutils/utils"
 	out "github.com/srgio-es/tcvolumeutils/utils/output"
 )
 
@@ -25,15 +21,12 @@ var (
 
 The information is processed and writed into a XLXS file to improve readiness.
 If the XLSX file specified contains data, the file is updated appending the new values.`,
-		Run: processCommand,
+		Run: reportMissing,
 	}
 
-	logFolder string
-	reportFile string
 	output out.VerboseOutput
-
-	collection map[string][]model.MissingFile
 )
+
 func init() {
 	rootCmd.AddCommand(reportmissingCmd)
 
@@ -45,7 +38,7 @@ func init() {
 	reportmissingCmd.MarkFlagFilename("report")
 }
 
-func processCommand(cmd *cobra.Command, args []string) {
+func reportMissing(cmd *cobra.Command, args []string) {
 	verbose, _ := cmd.Parent().Flags().GetBool("verbose")
 	output = out.VerboseOutput{Verbose: verbose}
 
@@ -65,14 +58,14 @@ func processCommand(cmd *cobra.Command, args []string) {
 
 	var toProcess []os.FileInfo
 	for _, file := range allFiles {
-		if(!file.IsDir() && strings.HasSuffix(file.Name(), "txt")){
+		if !file.IsDir() && strings.HasSuffix(file.Name(), "txt") {
 			toProcess = append(toProcess, file)
 		}
 	}
 
 	output.Printf("%d review_volumes log files marked to process", len(toProcess))
 
-	data := processLogs(toProcess)
+	data := processLogs(logFolder, toProcess)
 
 	reporter := reporter.NewExcelReporter(reportFile)
 	reporter.GenerateMissingFilesReport(data)
@@ -80,76 +73,4 @@ func processCommand(cmd *cobra.Command, args []string) {
 	fmt.Println("")
 	fmt.Printf("Report file generated: %s\n", reportFile)
 
-}
-
-func processLogs(files []os.FileInfo) (map[string][]*model.MissingFile) {
-
-	var result = make(map[string][]*model.MissingFile)
-
-	for _, file := range files {
-		output.Printf("Processed file: %s\n", file.Name())
-		volume := file.Name()[:len(file.Name())-4]
-		missingfiles := processFile(logFolder, file.Name(), volume)
-
-		result[volume] = missingfiles
-	}
-
-	return result
-
-}
-
-func processFile(location string, file string, volume string) ([]*model.MissingFile) {
-
-	var missingFiles []*model.MissingFile
-
-	f, err := ioutil.ReadFile(logFolder + string(os.PathSeparator) + file)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if !strings.Contains(string(f), "Error accessing volume") {
-
-		lines := getLines(f)
-
-		if(len(lines) > 0) {
-			fmt.Printf("Volume %s has %d missing files\n", file, len(lines))
-		} else {
-			output.Printf("Volume %s has no missing files\n", file)
-		}
-
-		for _, line := range lines {
-			output.Printf("Missing: %s\n", line)
-			p := converter.MissingFileParser{Line: line, Volume: volume}
-			missingFile := p.ParseLine(line)
-
-			missingFiles = append(missingFiles, &missingFile)
-		}
-
-	} else {
-		output.Printf("File %s has errrors and cannot be processed", file)
-	}
-
-	fmt.Println("")
-
-	return missingFiles
-
-}
-
-func getLines(raw []byte) []string {
-
-	b := strings.Index(string(raw), "Files missing from the OS file that are referenced by Teamcenter:")
-
-	if b > 0 {
-		raw = raw[b:]
-	}
-
-	s := strings.Index(string(raw), "\n")
-	e := strings.Index(string(raw), "--------------------------------------------------------------------------------")
-
-
-	if s > 0 && e > 0{
-		raw = raw[s:e]
-	}
-
-	return utils.RemoveLineEndingsFromSlice(utils.RemoveEmptyFromSlice(strings.Split(string(raw), "\n")))
 }
