@@ -3,11 +3,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/srgio-es/tcvolumeutils/model"
 	out "github.com/srgio-es/tcvolumeutils/utils/output"
 )
 
@@ -21,7 +24,7 @@ var (
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return checkArgs()
 		},
-		Run: createMissing,
+		Run: createMissingRoot,
 	}
 )
 
@@ -35,7 +38,7 @@ func init() {
 	createMissingCmd.MarkFlagFilename("log-file")
 }
 
-func createMissing(cmd *cobra.Command, args []string) {
+func createMissingRoot(cmd *cobra.Command, args []string) {
 	verbose, _ := cmd.Parent().Flags().GetBool("verbose")
 	output = out.VerboseOutput{Verbose: verbose}
 
@@ -74,21 +77,53 @@ func createMissing(cmd *cobra.Command, args []string) {
 		output.Printf("Log File: %s\n", logFile)
 		output.Println("")
 
-		file, err := os.Stat(logFile)
+		fp, _ := filepath.Abs(logFile)
+		s := strings.Split(fp, string(os.PathSeparator))
+
+		f, err := os.Stat(logFile)
 		if err != nil {
 			fmt.Println("ERROR: The log file does not exist")
-			fmt.Println("")
+			fmt.Printf("%s\n", err.Error())
 			cmd.Usage()
 			os.Exit(1)
 		}
 
-		toProcess = append(toProcess, file)
+		toProcess = append(toProcess, f)
+		logFolder = strings.Join(s[:len(s)-1], string(os.PathSeparator))
 	}
 
-	data := processLogs(toProcess)
-	fmt.Printf("%s", data)
+	data := processLogs(logFolder, toProcess)
+	createMissingFiles(data)
 
 }
+
+func createMissingFiles(data map[string][]*model.MissingFile) {
+
+	for volumeName := range data {
+		fmt.Printf("\nCreating files for volume %s\n", volumeName)
+
+		d := data[volumeName]
+
+		for _, mf := range d {
+			if checkDirExists(mf.FileLocation) {
+				if !checkFileAlreadyExists(mf.FileLocation) {
+					d := []byte("missing")
+					err := ioutil.WriteFile(mf.FileLocation, d, 0755)
+					if err != nil {
+						fmt.Printf("%s\n", err.Error())
+						os.Exit(3)
+					}
+					fmt.Printf("File %s for Dataset '%s' created succesfuly\n", mf.FileLocation, mf.DatasetName)
+				} else {
+					fmt.Printf("File %s exists in the destination folder. Skipping.\n", mf.FileLocation)
+				}
+			} else {
+				output.Printf("Destination folder for %s doesn't exist. You must create it prior execution of this utility. Skipping.\n", mf.FileLocation)
+			}
+		}
+	}
+}
+
 func checkArgs() error {
 	if logFile != "" && logFolder != "" {
 		return errors.New("log-file and log-folder arguments are mutually exclusive. Please specify only one of them.\n")
@@ -97,4 +132,38 @@ func checkArgs() error {
 	}
 
 	return nil
+}
+
+func checkFileAlreadyExists(file string) bool {
+
+	fs, err := os.Lstat(file)
+
+	if err != nil {
+		return false
+	}
+
+	if fs != nil {
+		return true
+	}
+
+	return false
+}
+
+func checkDirExists(file string) bool {
+	dir := filepath.Dir(file)
+	_, err := os.ReadDir(dir)
+
+	switch e := err.(type) {
+	default:
+		fmt.Printf("An unspecified error occured: %s", e.Error())
+		os.Exit(3)
+		return false
+
+	case *fs.PathError:
+		return false
+
+	case nil:
+		return true
+	}
+
 }
