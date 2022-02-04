@@ -118,7 +118,7 @@ func createMissingFiles(data map[string][]*model.MissingFile) {
 					fmt.Printf("File %s exists in the destination folder. Skipping.\n", mf.FileLocation)
 				}
 			} else {
-				output.Printf("Destination folder for %s doesn't exist. You must create it prior execution of this utility. Skipping.\n", mf.FileLocation)
+				fmt.Printf("Destination folder for %s doesn't exist. You must create it prior execution of this utility. Skipping.\n", mf.FileLocation)
 			}
 		}
 	}
