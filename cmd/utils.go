@@ -86,14 +86,14 @@ func getLines(raw []byte) []string {
 	return utils.RemoveLineEndingsFromSlice(utils.RemoveEmptyFromSlice(strings.Split(string(raw), "\n")))
 }
 
-func processLogs(files []os.FileInfo) map[string][]*model.MissingFile {
+func processLogs(folder string, files []os.FileInfo) map[string][]*model.MissingFile {
 
 	var result = make(map[string][]*model.MissingFile)
 
 	for _, file := range files {
 		output.Printf("Processed file: %s\n", file.Name())
 		volume := file.Name()[:len(file.Name())-4]
-		missingfiles := processFile(logFolder, file.Name(), volume)
+		missingfiles := processFile(folder, file.Name(), volume)
 
 		result[volume] = missingfiles
 	}

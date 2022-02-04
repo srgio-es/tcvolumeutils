@@ -65,7 +65,7 @@ func reportMissing(cmd *cobra.Command, args []string) {
 
 	output.Printf("%d review_volumes log files marked to process", len(toProcess))
 
-	data := processLogs(toProcess)
+	data := processLogs(logFolder, toProcess)
 
 	reporter := reporter.NewExcelReporter(reportFile)
 	reporter.GenerateMissingFilesReport(data)
