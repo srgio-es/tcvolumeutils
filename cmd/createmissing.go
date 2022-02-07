@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/srgio-es/tcvolumeutils/model"
+	"github.com/srgio-es/tcvolumeutils/utils"
 	out "github.com/srgio-es/tcvolumeutils/utils/output"
 )
 
@@ -105,8 +105,8 @@ func createMissingFiles(data map[string][]*model.MissingFile) {
 		d := data[volumeName]
 
 		for _, mf := range d {
-			if checkDirExists(mf.FileLocation) {
-				if !checkFileAlreadyExists(mf.FileLocation) {
+			if utils.CheckDirExists(mf.FileLocation) {
+				if !utils.CheckFileAlreadyExists(mf.FileLocation) {
 					d := []byte("missing")
 					err := ioutil.WriteFile(mf.FileLocation, d, 0755)
 					if err != nil {
@@ -132,38 +132,4 @@ func checkArgs() error {
 	}
 
 	return nil
-}
-
-func checkFileAlreadyExists(file string) bool {
-
-	fs, err := os.Lstat(file)
-
-	if err != nil {
-		return false
-	}
-
-	if fs != nil {
-		return true
-	}
-
-	return false
-}
-
-func checkDirExists(file string) bool {
-	dir := filepath.Dir(file)
-	_, err := os.ReadDir(dir)
-
-	switch e := err.(type) {
-	default:
-		fmt.Printf("An unspecified error occured: %s", e.Error())
-		os.Exit(3)
-		return false
-
-	case *fs.PathError:
-		return false
-
-	case nil:
-		return true
-	}
-
 }
