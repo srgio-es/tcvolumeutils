@@ -10,6 +10,14 @@ import (
 	"github.com/srgio-es/tcvolumeutils/model"
 )
 
+var (
+	datasetNameRe  = regexp.MustCompile("'(.*?)'")
+	datasetUIDRe   = regexp.MustCompile("<+([^<>]+?)>+")
+	siteRe         = regexp.MustCompile("site:<(.*?)>")
+	versionRe      = regexp.MustCompile("version:([0-9]+)")
+	modifiedDateRe = regexp.MustCompile(`lmd:(.+?)\)`)
+)
+
 type MissingFileParser struct {
 	Line 	string
 	Volume 	string
@@ -28,28 +36,36 @@ func (p *MissingFileParser) ParseLine(line string) model.MissingFile {
 	return missingFile
 }
 
+// findGroup returns the first capture group of re in the line, or "" when
+// there is no match. Some lines (e.g. "unreferenced ImanFile <<UID>> references ...")
+// lack the dataset name, site, version and lmd fields.
+func (p *MissingFileParser) findGroup(re *regexp.Regexp) string {
+	m := re.FindStringSubmatch(p.Line)
+	if m == nil {
+		return ""
+	}
+	return m[1]
+}
+
 func (p *MissingFileParser) parseDatasetName() string {
-	re := regexp.MustCompile("'.*?'")
-	str := re.FindString(p.Line)
-	return str[1:len(str)-1]
+	return p.findGroup(datasetNameRe)
 }
 
 func (p *MissingFileParser) parseDatasetUID() string {
-	re := regexp.MustCompile("<.*?>")
-	str := re.FindString(p.Line)
-	return str[1:len(str)-1]
+	return p.findGroup(datasetUIDRe)
 }
 
 func (p *MissingFileParser) parseSite() string {
-	re := regexp.MustCompile("site:<.*?>")
-	str := re.FindString(p.Line)
-	return str[6:len(str)-1]
+	return p.findGroup(siteRe)
 }
 
 func (p *MissingFileParser) parseVersion() int64 {
-	re := regexp.MustCompile("version:([0-9]{1,})")
-	str := re.FindString(p.Line)
-	v, err := strconv.ParseInt(str[8:], 10, 64)
+	str := p.findGroup(versionRe)
+	if str == "" {
+		return 0
+	}
+
+	v, err := strconv.ParseInt(str, 10, 64)
 
 	if err != nil {
 		log.Fatal(err)
@@ -59,12 +75,14 @@ func (p *MissingFileParser) parseVersion() int64 {
 }
 
 func (p *MissingFileParser) parseModifiedDate() time.Time {
-	re := regexp.MustCompile("lmd:.{1,}\\)")
-	str := re.FindString(p.Line)
+	str := p.findGroup(modifiedDateRe)
+	if str == "" {
+		return time.Time{}
+	}
 
 	layout := "06/01/02 15:04:05"
 
-	date, err := time.Parse(layout, str[4:len(str)-1])
+	date, err := time.Parse(layout, str)
 
 	if err!=nil {
 		log.Fatal(err)

@@ -118,8 +118,10 @@ func printVolumeSheetValues(file *excelize.File, sheet string, data []*model.Mis
 			file.SetCellValue(sheet, "A" + row, v.DatasetName)
 			file.SetCellValue(sheet, "B" + row, v.Version)
 			file.SetCellValue(sheet, "C" + row, v.UID)
-			file.SetCellValue(sheet, "D" + row, v.ModifiedDate)
-			file.SetCellStyle(sheet, "D" + row, "D"+row, dateStyle)
+			if !v.ModifiedDate.IsZero() {
+				file.SetCellValue(sheet, "D" + row, v.ModifiedDate)
+				file.SetCellStyle(sheet, "D" + row, "D"+row, dateStyle)
+			}
 			file.SetCellValue(sheet, "E" + row, v.Site)
 			file.SetCellValue(sheet, "F" + row, v.FileLocation)
 		}

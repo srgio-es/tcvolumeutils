@@ -52,3 +52,16 @@ func Test_ParseFileLocation(t *testing.T) {
 func Test_Volume(t *testing.T) {
 	assert.Equal(t, "SF-TOL", p.Volume)
 }
+func Test_ParseLine_UnreferencedImanFile(t *testing.T) {
+	line := "unreferenced ImanFile <<TzDABoou5FYbKA>> references E:\\volume\\ingenieria_abc_63299ab3\\53563__exc_ge40n9cbw9kh3.xlsx"
+	up := MissingFileParser{Line: line, Volume: "ingenieria_abc"}
+	res := up.ParseLine(line)
+
+	assert.Equal(t, "", res.DatasetName)
+	assert.Equal(t, "TzDABoou5FYbKA", res.UID)
+	assert.Equal(t, "", res.Site)
+	assert.EqualValues(t, 0, res.Version)
+	assert.True(t, res.ModifiedDate.IsZero())
+	assert.Equal(t, "E:\\volume\\ingenieria_abc_63299ab3\\53563__exc_ge40n9cbw9kh3.xlsx", res.FileLocation)
+	assert.Equal(t, "ingenieria_abc", res.Volume)
+}
